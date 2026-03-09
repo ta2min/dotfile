@@ -1,0 +1,8 @@
+# --- completion / usability ---
+zsh-users/zsh-autosuggestions
+zsh-users/zsh-completions
+Aloxaf/fzf-tab          # fzf補完を使うなら
+zdharma-continuum/fast-syntax-highlighting  # 速いハイライト派
+
+# git
+paulirish/git-open

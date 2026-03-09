@@ -1,7 +1,9 @@
 : "一般的な設定" && {
-  autoload -U compinit && compinit -d ${COMPDUMPFILE} # 補完機能の強化
+  typeset -g ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE='20'
+
   zstyle ':completion:*' list-prompt %SAt %p: Hit TAB for more, or the character to insert
   zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}' #補完で大文字を区別しない
+
   setopt correct # 入力しているコマンド名が間違っている場合にもしかして：を出す。
   setopt nobeep # ビープを鳴らさない
   setopt no_tify # バックグラウンドジョブが終了したらすぐに知らせる。
@@ -13,8 +15,8 @@
 
 : "ヒストリ関連の設定" && {
   HISTSIZE=10000 # メモリに保存される履歴の件数
-  SAVEHIST=10000 # 履歴ファイルに保存される履歴の件数
-  HISTFILE=~/.zsh_history # 履歴ファイル  
+  SAVEHIST=100000 # 履歴ファイルに保存される履歴の件数
+  HISTFILE=~/.zsh_history # 履歴ファイル
   setopt hist_ignore_dups # 直前と同じコマンドをヒストリに追加しない
   setopt hist_ignore_all_dups # 重複するコマンドは古い法を削除する
   setopt share_history # 異なるウィンドウでコマンドヒストリを共有する
@@ -25,52 +27,54 @@
 
 : "キーバインディング" && {
   bindkey -e # emacs キーマップを選択
+
   : "Ctrl-Yで上のディレクトリに移動できる" && {
     function cd-up { zle push-line && LBUFFER='builtin cd ..' && zle accept-line }
     zle -N cd-up
     bindkey "^Y" cd-up
   }
+
   : "Ctrl-Dでシェルからログアウトしない" && {
     setopt ignoreeof
   }
+
   : "Ctrl-Wでパスの文字列などをスラッシュ単位でdeleteできる" && {
     autoload -U select-word-style
     select-word-style bash
   }
+
   : "Ctrl-[で直前コマンドの単語を挿入できる" && {
     autoload -Uz smart-insert-last-word
-    zstyle :insert-last-word match '*([[:alpha:]/\\]?|?[[:alpha:]/\\])*' # [a-zA-Z], /, \ のうち少なくとも1文字を含む長さ2以上の単語
+    zstyle :insert-last-word match '*([[:alpha:]/\\]?|?[[:alpha:]/\\])*'
     zle -N insert-last-word smart-insert-last-word
     bindkey '^[' insert-last-word
     # see http://qiita.com/mollifier/items/1a9126b2200bcbaf515f
   }
 }
 
-: "プラグイン" && {
-  source ~/.zplug/init.zsh
-  zplug "zsh-users/zsh-completions" # 多くのコマンドに対応する入力補完 … https://github.com/zsh-users/zsh-completions
-  zplug "mafredri/zsh-async" # "sindresorhus/pure"が依存している
-  zplug "sindresorhus/pure", use:pure.zsh, from:github, as:theme && { # 美しく最小限で高速なプロンプト … https://github.com/sindresorhus/pure
-    export PURE_PROMPT_SYMBOL="❯❯❯"
-  }
-  zplug "zsh-users/zsh-syntax-highlighting", defer:2 # fishシェル風のシンタクスハイライト … https://github.com/zsh-users/zsh-syntax-highlighting
-  zplug "supercrabtree/k" # git情報を含んだファイルリストを表示するコマンド … https://github.com/supercrabtree/k
-  # zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf # あいまい検索ができるコマンド … https://github.com/junegunn/fzf
-  # zplug "junegunn/fzf", as:command, use:bin/fzf-tmux # tmuxでfzfを使えるようにするプラグイン
-  zplug "junegunn/fzf", use:shell/key-bindings.zsh # Ctrl-Rで履歴検索、Ctrl-Tでファイル名検索補完できる
-  zplug "junegunn/fzf", use:shell/completion.zsh # cd **[TAB], vim **[TAB]などでファイル名を補完できる
-  zplug "b4b4r07/enhancd", use:init.sh # cdコマンドをインタラクティブにするプラグイン … https://github.com/b4b4r07/enhancd
-  zplug 'b4b4r07/gomi', as:command, from:gh-r # 消したファイルをゴミ箱から復元できるrmコマンド代替 … https://github.com/b4b4r07/gomi
-  # zplug "momo-lab/zsh-abbrev-alias" # 略語展開(iab)を設定するためのプラグイン … http://qiita.com/momo-lab/items/b1b1afee313e42ba687b
-  zplug "paulirish/git-open", as:plugin # GitHub, GitLab, BitBucketを開けるようにするコマンド … https://github.com/paulirish/git-open
-  # # 未インストール項目をインストールする
-  if ! zplug check --verbose; then
-      printf "Install? [y/N]: "
-      if read -q; then
-          echo; zplug install
-      fi
+: "プラグイン (Antidote)" && {
+  # Antidote本体（Homebrewなら /opt/homebrew/share/antidote/antidote.zsh になることもあります）
+  # ここはあなたの環境の置き場所に合わせてどれか1つを有効化してください。
+
+  # 例1: git cloneで ~/.antidote に入れる場合（おすすめ）
+  #   [[ -f ~/.antidote/antidote.zsh ]] && source ~/.antidote/antidote.zsh
+
+  # 例2: Homebrewの例（必要なら）
+  [[ -f /opt/homebrew/share/antidote/antidote.zsh ]] && source /opt/homebrew/share/antidote/antidote.zsh
+
+  # プラグイン読み込み（定義ファイルは ~/.zsh_plugins.txt）
+  if (( $+functions[antidote] )); then
+    antidote load ~/.zsh_plugins.txt
   fi
-  zplug load
+}
+
+: "compinit（プラグイン読み込み後に実行）" && {
+  # compdumpの置き場（あなたの元の変数を尊重）
+  : ${COMPDUMPFILE:=${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump}
+  mkdir -p "${COMPDUMPFILE:h}"
+
+  autoload -U compinit
+  compinit -d "${COMPDUMPFILE}"
 }
 
 : "cd先のディレクトリのファイル一覧を表示する" && {
@@ -79,43 +83,49 @@
 }
 
 : "sshコマンド補完を~/.ssh/configから行う" && {
-  function _ssh { compadd $(fgrep 'Host ' ~/.ssh/*/config | grep -v '*' |  awk '{print $2}' | sort) }
+  function _ssh { compadd $(fgrep 'Host ' ~/.ssh/config | grep -v '*' |  awk '{print $2}' | sort) }
 }
-
-# : "cudaの環境変数" && {
-#   export PATH="/usr/local/cuda/bin:$PATH"
-#   export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
-# }
-# : "GolangのPATH" && {
-#  export GOPATH=$HOME/work/go
-#   export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin
-# }
-
-: "RubyのPATH" && {
- export PATH="$HOME/.rbenv/bin:$PATH"
- eval "$(rbenv init -)"
-}
-
-# : "alias" && {
-#   alias conoha='sudo ssh -i ~/.ssh/id_ed25519 souta@150.95.179.94 -p 20022' #ConohaVPSへのログイン
-#   alias projectone='sudo ssh projectone@153.126.140.247 -p 20022' #Project OneのさくらVPS
-# }
 
 # gitignore生成コマンド
 function gi() {
-    curl -L -s https://www.gitignore.io/api/$@
+  curl -L -s https://www.gitignore.io/api/$@
 }
 
-# コマンドラインの出力をコピーするalias
-alias pbcopy='xsel --clipboard --input'
+function awsp() {
+  local profile
+  # ~/.aws/config からプロファイル名の一覧を取得して fzf で選択
+  profile=$(aws configure list-profiles | fzf --height 40% --reverse --border --prompt="Select AWS Profile > ")
 
-# カレントディレクトリ以下のrootが所有者のファイルの自分に変更するalias
-alias chmine='sudo chown -R ta2mi:ta2mi ./'
-alias dcr='docker-compose exec web'
+  if [ -n "$profile" ]; then
+    export AWS_PROFILE=$profile
+    echo "Switched to AWS Profile: $AWS_PROFILE"
+  else
+    echo "No profile selected."
+  fi
+}
 
-# tabtab source for yarn package
-# uninstall by removing these lines or running `tabtab uninstall yarn`
-# [[ -f /Users/suin/Dropbox/open/dotfiles/.config/yarn/global/node_modules/yarn-completions/node_modules/tabtab/.completions/yarn.zsh ]] && . /Users/suin/Dropbox/open/dotfiles/.config/yarn/global/node_modules/yarn-completions/node_modules/tabtab/.completions/yarn.zsh
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+# プロファイルを解除する関数
+function awspun() {
+  unset AWS_PROFILE
+  echo "AWS_PROFILE unset."
+}
 
+: "alias" && {
+  alias sed='gsed'
+  alias g='cd $(ghq root)/$(ghq list | fzf)'
+  alias pbcopy='pbcopy && pbpaste'
+  alias kc="kubectl"
+  alias rm=gomi
+}
 
+: "セッティング系" && {
+  source <(fzf --zsh)
+  eval "$(starship init zsh)"
+  eval "$(/opt/homebrew/bin/mise activate zsh)"
+  eval "$(zoxide init zsh --cmd cd)"
+  source ~/.config/op/plugins.sh
+}
+
+: "PATH追加": && {
+  export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+}

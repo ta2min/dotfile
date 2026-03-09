@@ -1,0 +1,13 @@
+[user]
+	email = ta2mi.prostudy@gmail.com
+	name = ta2min
+
+[alias]
+    st = status
+    ss = status
+    co = checkout
+	sw = switch
+	c  = commit
+	cm = commit -m
+	cno = commit --amend --no-edit
+	pushf = push --force-with-lease --force-if-includes
