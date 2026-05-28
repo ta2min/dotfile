@@ -20,7 +20,19 @@ echo ""
 echo "=== Nix のセットアップ ==="
 if ! command -v nix &> /dev/null; then
   echo -e "${YELLOW}Nix がインストールされていません。インストールを開始します...${NC}"
-  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --enable-flakes
+
+  # DevContainer/コンテナ環境では --init none を使用
+  if [ -f "/.dockerenv" ] || [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
+    echo -e "${YELLOW}コンテナ環境を検出しました。systemdなしでインストールします...${NC}"
+    curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install linux \
+      --extra-conf "sandbox = false" \
+      --init none \
+      --enable-flakes \
+      --no-confirm
+  else
+    curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --enable-flakes
+  fi
+
   echo -e "${GREEN}Nix のインストールが完了しました${NC}"
 else
   echo -e "${GREEN}Nix は既にインストールされています${NC}"
@@ -28,9 +40,16 @@ fi
 
 # Nixの環境変数をロード
 if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+  echo -e "${YELLOW}Nix環境変数をロード中 (multi-user)...${NC}"
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 elif [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
-  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+  echo -e "${YELLOW}Nix環境変数をロード中 (single-user)...${NC}"
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh
+fi
+
+# コンテナ環境でNixコマンドを使えるようにする
+if [ -d /nix/store ]; then
+  export PATH="/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH"
 fi
 
 # Home Managerのセットアップ
