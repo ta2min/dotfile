@@ -117,7 +117,8 @@ if [ -f "$DOTFILES_DIR/flake.nix" ]; then
       "PATH=/nix/var/nix/profiles/default/bin:$PATH" \
       "USER=$TARGET_USER" \
       "HOME=$(eval echo ~$TARGET_USER)" \
-      "$NIX_BIN" run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
+      "TARGET_USER=$TARGET_USER" \
+      "$NIX_BIN" run home-manager/master --impure -- switch --flake "$DOTFILES_DIR#$PLATFORM"
   else
     nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
   fi
