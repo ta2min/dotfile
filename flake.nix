@@ -28,8 +28,11 @@
       # macOS (Apple Silicon)
       homeConfigurations."aarch64-darwin" = mkHomeConfiguration "aarch64-darwin" defaultUser;
 
-      # Linux (devcontainer用)
+      # Linux x86_64 (devcontainer用)
       homeConfigurations."x86_64-linux" = mkHomeConfiguration "x86_64-linux" defaultUser;
+
+      # Linux ARM64 (devcontainer用 - Apple Silicon Mac)
+      homeConfigurations."aarch64-linux" = mkHomeConfiguration "aarch64-linux" defaultUser;
 
       # デフォルト (macOS ARM64)
       homeConfigurations.default = mkHomeConfiguration "aarch64-darwin" defaultUser;

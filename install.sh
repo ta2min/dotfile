@@ -59,16 +59,26 @@ if [ -f "$DOTFILES_DIR/flake.nix" ]; then
   echo -e "${YELLOW}Home Manager で環境を構築します...${NC}"
 
   # プラットフォームの検出
+  ARCH="$(uname -m)"
   if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    PLATFORM="x86_64-linux"
+    if [[ "$ARCH" == "aarch64" ]] || [[ "$ARCH" == "arm64" ]]; then
+      PLATFORM="aarch64-linux"
+    else
+      PLATFORM="x86_64-linux"
+    fi
   elif [[ "$OSTYPE" == "darwin"* ]]; then
-    if [[ "$(uname -m)" == "arm64" ]]; then
+    if [[ "$ARCH" == "arm64" ]]; then
       PLATFORM="aarch64-darwin"
     else
       PLATFORM="x86_64-darwin"
     fi
   else
-    PLATFORM="x86_64-linux"
+    # デフォルトはアーキテクチャを検出
+    if [[ "$ARCH" == "aarch64" ]] || [[ "$ARCH" == "arm64" ]]; then
+      PLATFORM="aarch64-linux"
+    else
+      PLATFORM="x86_64-linux"
+    fi
   fi
 
   echo -e "${YELLOW}プラットフォーム: $PLATFORM${NC}"
