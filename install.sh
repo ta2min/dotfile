@@ -44,7 +44,7 @@ if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 elif [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
   echo -e "${YELLOW}Nix環境変数をロード中 (single-user)...${NC}"
-  . "$HOME/.nix-profile/etc/profile.d/nix.sh
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 fi
 
 # コンテナ環境でNixコマンドを使えるようにする
@@ -72,7 +72,15 @@ if [ -f "$DOTFILES_DIR/flake.nix" ]; then
   fi
 
   echo -e "${YELLOW}プラットフォーム: $PLATFORM${NC}"
-  nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
+
+  # コンテナ環境では sudo -i 経由で実行
+  if [ -f "/.dockerenv" ] || [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
+    echo -e "${YELLOW}コンテナ環境: sudo経由で実行します${NC}"
+    sudo -i nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
+  else
+    nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
+  fi
+
   echo -e "${GREEN}Home Manager のセットアップが完了しました${NC}"
 else
   echo -e "${YELLOW}flake.nix が見つかりませんでした。スキップします${NC}"
