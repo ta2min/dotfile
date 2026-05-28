@@ -15,6 +15,50 @@ BACKUP_DIR="$HOME/.dotfile_backup"
 echo -e "${GREEN}Dotfiles のセットアップを開始します${NC}"
 echo "Dotfiles ディレクトリ: $DOTFILES_DIR"
 
+# Nixのインストールチェックとセットアップ
+echo ""
+echo "=== Nix のセットアップ ==="
+if ! command -v nix &> /dev/null; then
+  echo -e "${YELLOW}Nix がインストールされていません。インストールを開始します...${NC}"
+  curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --enable-flakes
+  echo -e "${GREEN}Nix のインストールが完了しました${NC}"
+else
+  echo -e "${GREEN}Nix は既にインストールされています${NC}"
+fi
+
+# Nixの環境変数をロード
+if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+elif [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+fi
+
+# Home Managerのセットアップ
+echo ""
+echo "=== Home Manager のセットアップ ==="
+if [ -f "$DOTFILES_DIR/flake.nix" ]; then
+  echo -e "${YELLOW}Home Manager で環境を構築します...${NC}"
+
+  # プラットフォームの検出
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    PLATFORM="x86_64-linux"
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    if [[ "$(uname -m)" == "arm64" ]]; then
+      PLATFORM="aarch64-darwin"
+    else
+      PLATFORM="x86_64-darwin"
+    fi
+  else
+    PLATFORM="x86_64-linux"
+  fi
+
+  echo -e "${YELLOW}プラットフォーム: $PLATFORM${NC}"
+  nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
+  echo -e "${GREEN}Home Manager のセットアップが完了しました${NC}"
+else
+  echo -e "${YELLOW}flake.nix が見つかりませんでした。スキップします${NC}"
+fi
+
 # バックアップディレクトリの作成
 if [ ! -d "$BACKUP_DIR" ]; then
   mkdir -p "$BACKUP_DIR"
