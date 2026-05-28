@@ -118,14 +118,14 @@ function awspun() {
   alias rm=gomi
 }
 
+: "PATH追加": && {
+  export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+}
+
 : "セッティング系" && {
   source <(fzf --zsh)
   eval "$(starship init zsh)"
   eval "$(/opt/homebrew/bin/mise activate zsh)"
   eval "$(zoxide init zsh --cmd cd)"
   source ~/.config/op/plugins.sh
-}
-
-: "PATH追加": && {
-  export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 }

@@ -7,3 +7,13 @@
 
 # Temporary files
 *~
+
+# Nix result symlinks
+result
+result-*
+
+# Home Manager generations
+.home-manager-generations
+
+# Dotfile backup directory
+.dotfile_backup/

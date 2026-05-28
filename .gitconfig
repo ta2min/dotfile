@@ -11,3 +11,8 @@
 	cm = commit -m
 	cno = commit --amend --no-edit
 	pushf = push --force-with-lease --force-if-includes
+[core]
+	editor = code --wait
+	hooksPath = /Users/sota.tatsumi/.config/git/hooks
+[push]
+	autoSetupRemote = true

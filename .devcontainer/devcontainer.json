@@ -1,0 +1,31 @@
+{
+  "name": "Nix Development Container",
+  "image": "nixos/nix:latest",
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "username": "vscode",
+      "userUid": 1000,
+      "userGid": 1000
+    }
+  },
+
+  "postCreateCommand": "nix --version && nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs && nix-channel --update",
+
+  "postStartCommand": "nix run home-manager/master -- switch --flake /workspace#x86_64-linux",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "jnoortheen.nix-ide"
+      ]
+    }
+  },
+
+  "mounts": [
+    "source=${localEnv:HOME}/.config/git,target=/home/vscode/.config/git,type=bind,consistency=cached"
+  ],
+
+  "remoteUser": "vscode"
+}
