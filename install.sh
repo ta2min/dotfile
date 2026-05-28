@@ -63,6 +63,21 @@ echo "=== Home Manager のセットアップ ==="
 if [ -f "$DOTFILES_DIR/flake.nix" ]; then
   echo -e "${YELLOW}Home Manager で環境を構築します...${NC}"
 
+  # コンテナ環境での事前準備
+  if [ -f "/.dockerenv" ] || [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
+    TARGET_HOME=$(eval echo ~$TARGET_USER)
+    echo -e "${YELLOW}Nixプロファイルディレクトリを準備中...${NC}"
+
+    # プロファイルディレクトリを作成
+    sudo mkdir -p "/nix/var/nix/profiles/per-user/$TARGET_USER"
+    sudo chown -R "$TARGET_USER" "/nix/var/nix/profiles/per-user/$TARGET_USER"
+
+    # ホームディレクトリの所有権を確認・修正
+    if [ -d "$TARGET_HOME" ]; then
+      sudo chown -R "$TARGET_USER:$TARGET_USER" "$TARGET_HOME"
+    fi
+  fi
+
   # プラットフォームの検出
   ARCH="$(uname -m)"
   if [[ "$OSTYPE" == "linux-gnu"* ]]; then
