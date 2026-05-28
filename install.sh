@@ -8,8 +8,9 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# ユーザー名の取得（引数 > 環境変数 > 現在のユーザー）
-TARGET_USER="${1:-${USER:-$(whoami)}}"
+# ユーザー名の取得（引数 > SUDO_USER > 環境変数 > 現在のユーザー）
+# DevContainerでsudo経由で実行された場合、元のユーザーを取得
+TARGET_USER="${1:-${SUDO_USER:-${USER:-$(whoami)}}}"
 
 # スクリプトのディレクトリを取得
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -90,8 +91,18 @@ if [ -f "$DOTFILES_DIR/flake.nix" ]; then
   # コンテナ環境では sudo 経由で実行（環境変数を保持）
   if [ -f "/.dockerenv" ] || [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
     echo -e "${YELLOW}コンテナ環境: sudo経由で実行します（ユーザー: $TARGET_USER）${NC}"
-    sudo -E env "USER=$TARGET_USER" "HOME=$(eval echo ~$TARGET_USER)" \
-      nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
+
+    # nixコマンドのフルパスを取得
+    NIX_BIN="/nix/var/nix/profiles/default/bin/nix"
+    if [ ! -f "$NIX_BIN" ]; then
+      NIX_BIN="$(command -v nix)"
+    fi
+
+    sudo -E env \
+      "PATH=/nix/var/nix/profiles/default/bin:$PATH" \
+      "USER=$TARGET_USER" \
+      "HOME=$(eval echo ~$TARGET_USER)" \
+      "$NIX_BIN" run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
   else
     nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
   fi
