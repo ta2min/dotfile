@@ -117,7 +117,7 @@ if [ -f "$DOTFILES_DIR/flake.nix" ]; then
       "USER=$TARGET_USER" \
       "HOME=$(eval echo ~$TARGET_USER)" \
       "TARGET_USER=$TARGET_USER" \
-      "$NIX_BIN" run home-manager/master --impure -- switch --flake "$DOTFILES_DIR#$PLATFORM"
+      "$NIX_BIN" run home-manager/master --impure -- switch --flake "$DOTFILES_DIR#$PLATFORM" -b backup
   else
     nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM"
   fi
@@ -127,11 +127,6 @@ else
   echo -e "${YELLOW}flake.nix が見つかりませんでした。スキップします${NC}"
 fi
 
-# バックアップディレクトリの作成
-if [ ! -d "$BACKUP_DIR" ]; then
-  mkdir -p "$BACKUP_DIR"
-  echo -e "${GREEN}バックアップディレクトリを作成しました: $BACKUP_DIR${NC}"
-fi
 
 # シンボリックリンクを作成する関数
 create_symlink() {
@@ -152,11 +147,6 @@ create_symlink() {
       echo -e "${YELLOW}スキップ: $target (既に正しくリンクされています)${NC}"
       return
     fi
-
-    # バックアップ
-    local backup_path="$BACKUP_DIR/$(basename "$target").$(date +%Y%m%d_%H%M%S)"
-    mv "$target" "$backup_path"
-    echo -e "${YELLOW}バックアップしました: $target -> $backup_path${NC}"
   fi
 
   # シンボリックリンクを作成
