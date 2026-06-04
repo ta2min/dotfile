@@ -20,28 +20,9 @@ echo -e "${GREEN}Dotfiles のセットアップを開始します${NC}"
 echo "Dotfiles ディレクトリ: $DOTFILES_DIR"
 echo "対象ユーザー: $TARGET_USER"
 
-# Nixのインストールチェックとセットアップ
+# Nix環境の確認とセットアップ
 echo ""
-echo "=== Nix のセットアップ ==="
-if ! command -v nix &> /dev/null; then
-  echo -e "${YELLOW}Nix がインストールされていません。インストールを開始します...${NC}"
-
-  # DevContainer/コンテナ環境では --init none を使用
-  if [ -f "/.dockerenv" ] || [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
-    echo -e "${YELLOW}コンテナ環境を検出しました。systemdなしでインストールします...${NC}"
-    curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install linux \
-      --extra-conf "sandbox = false" \
-      --init none \
-      --enable-flakes \
-      --no-confirm
-  else
-    curl -sSfL https://artifacts.nixos.org/nix-installer | sh -s -- install --enable-flakes
-  fi
-
-  echo -e "${GREEN}Nix のインストールが完了しました${NC}"
-else
-  echo -e "${GREEN}Nix は既にインストールされています${NC}"
-fi
+echo "=== Nix 環境の確認 ==="
 
 # Nixの環境変数をロード
 if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
@@ -52,10 +33,19 @@ elif [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
   . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 fi
 
-# コンテナ環境でNixコマンドを使えるようにする
+# PATHの設定
 if [ -d /nix/store ]; then
   export PATH="/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH"
 fi
+
+# Nixが利用可能か確認
+if ! command -v nix &> /dev/null; then
+  echo -e "${RED}エラー: Nix がインストールされていません${NC}"
+  echo -e "${YELLOW}DevContainerのfeatureでNixをインストールしてください${NC}"
+  exit 1
+fi
+
+echo -e "${GREEN}Nix が利用可能です ($(nix --version))${NC}"
 
 # Home Managerのセットアップ
 echo ""
@@ -74,7 +64,16 @@ if [ -f "$DOTFILES_DIR/flake.nix" ]; then
 
     # ホームディレクトリの所有権を確認・修正
     if [ -d "$TARGET_HOME" ]; then
-      sudo chown -R "$TARGET_USER:$TARGET_USER" "$TARGET_HOME"
+      echo -e "${YELLOW}ホームディレクトリの所有権を修正中...${NC}"
+      sudo chown "$TARGET_USER:$TARGET_USER" "$TARGET_HOME"
+
+      # 既存のdotfilesをバックアップ
+      for file in .zshrc .gitconfig .zsh_plugins.txt; do
+        if [ -f "$TARGET_HOME/$file" ] && [ ! -L "$TARGET_HOME/$file" ]; then
+          echo -e "${YELLOW}既存ファイルをバックアップ: $file${NC}"
+          sudo mv "$TARGET_HOME/$file" "$TARGET_HOME/$file.backup-$(date +%Y%m%d_%H%M%S)"
+        fi
+      done
     fi
   fi
 
