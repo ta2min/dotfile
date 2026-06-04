@@ -12,8 +12,8 @@
 
   outputs = { self, nixpkgs, home-manager, ... }:
     let
-      # デフォルトユーザー名 (必要に応じて変更)
-      defaultUser = "sota.tatsumi";
+      # ホストからユーザー名を取得
+      defaultUser = builtins.getEnv "USER";
 
       # 環境変数からユーザー名を取得（DevContainer用）
       envUser = builtins.getEnv "TARGET_USER";

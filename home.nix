@@ -4,8 +4,6 @@
   # Home Managerのバージョン設定
   home.stateVersion = "24.05";
 
-  # ユーザー情報 (flake.nixから上書き可能)
-  home.username = lib.mkDefault "sota.tatsumi";
   home.homeDirectory = lib.mkDefault (
     if pkgs.stdenv.isDarwin
     then "/Users/${config.home.username}"
@@ -24,6 +22,8 @@
 
   # Home Managerによる設定ファイル管理
   home.file = {
+    ".zshrc".source = ./.zshrc;
+    ".gitconfig".source = ./.gitconfig;
     ".config/starship.toml".source = ./.config/starship.toml;
     ".zsh_plugins.txt".source = ./zsh_plugins.txt;
   };
