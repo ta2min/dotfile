@@ -28,6 +28,10 @@
     ".zsh_plugins.txt".source = ./zsh_plugins.txt;
   };
 
+  home.sessionVariables = {
+    SSH_AUTH_SOCK = "$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock";
+  };
+
   # Home Manager自体にプログラム管理を任せる
   programs.home-manager.enable = true;
 }
