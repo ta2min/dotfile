@@ -86,7 +86,8 @@ if [ -f "$DOTFILES_DIR/flake.nix" ]; then
     fi
   fi
 
-  nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM" -b backup
+  # --impure: flake.nix 内の builtins.getEnv "USER" を有効にするため
+  nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM" -b backup --impure
 
   echo -e "${GREEN}Home Manager のセットアップが完了しました${NC}"
 else

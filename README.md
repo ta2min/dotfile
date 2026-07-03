@@ -44,13 +44,14 @@ git clone https://github.com/ta2min/dotfile.git ~/ghq/github.com/ta2min/dotfile
 cd ~/ghq/github.com/ta2min/dotfile
 
 # Apple Silicon Mac
-nix run home-manager/master -- switch --flake .#aarch64-darwin
+# --impure: flake.nix 内の $USER 参照 (builtins.getEnv) を有効にするため必須
+nix run home-manager/master -- switch --flake .#aarch64-darwin --impure
 
 # Linux/DevContainer
-nix run home-manager/master -- switch --flake .#x86_64-linux
+nix run home-manager/master -- switch --flake .#x86_64-linux --impure
 
 # デフォルト (Apple Silicon)
-nix run home-manager/master -- switch --flake .#default
+nix run home-manager/master -- switch --flake .#default --impure
 ```
 
 #### 方法2: DevContainerで使用
