@@ -4,6 +4,14 @@
   programs.git = {
     enable = true;
 
+    ignores = [
+      ".DS_Store"
+      "mise.toml"
+      "**/.claude/settings.local.json"
+      "**/.claude/.cc-writes/"
+      "tmp"
+    ]
+
     settings = {
       user = {
         name = "ta2min";
