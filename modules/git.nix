@@ -10,7 +10,7 @@
       "**/.claude/settings.local.json"
       "**/.claude/.cc-writes/"
       "tmp"
-    ]
+    ];
 
     settings = {
       user = {
