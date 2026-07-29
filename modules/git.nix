@@ -27,6 +27,7 @@
         cm = "commit -m";
         cno = "commit --amend --no-edit";
         pushf = "push --force-with-lease --force-if-includes";
+	new-branch = "branch --sort=-committerdate"
       };
 
       core = {
