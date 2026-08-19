@@ -27,6 +27,12 @@ in
 
     # Zshオプション
     initContent = ''
+      # Home Manager のパッケージを確実に PATH へ通す (コンテナ差異対策)
+      # 環境によっては home-manager の profile が ~/.nix-profile (XDG配置) に入り、
+      # /nix/var/nix/profiles/default しか PATH に無いコンテナでは starship 等が
+      # command not found になるため、ここで明示的に先頭へ追加する。
+      export PATH="$HOME/.nix-profile/bin:$PATH"
+
       # 一般的な設定
       setopt correct                  # コマンド訂正
       setopt nobeep                   # ビープ音無効
