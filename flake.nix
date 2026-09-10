@@ -10,35 +10,50 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }:
+  outputs = { nixpkgs, home-manager, ... }:
     let
-      # ホストからユーザー名を取得
-      defaultUser = builtins.getEnv "USER";
+      inherit (nixpkgs) lib;
 
-      # 環境変数からユーザー名を取得（DevContainer用）
-      envUser = builtins.getEnv "TARGET_USER";
-      containerUser = if envUser != "" then envUser else "vscode";
+      systems = [ "aarch64-darwin" "x86_64-darwin" "aarch64-linux" "x86_64-linux" ];
 
-      # 各プラットフォーム用の設定を生成
-      mkHomeConfiguration = system: username: home-manager.lib.homeManagerConfiguration {
+      # コンテナごとにユーザー名が変わる (vscode / node / ubuntu / root) ため、
+      # username と homeDirectory は評価時に環境から読む。よって --impure が必須。
+      # 空のまま既定値にフォールバックすると別ユーザーの home を書き換えて壊れるので、
+      # 未設定なら即座に失敗させる。
+      envOrThrow = name:
+        let value = builtins.getEnv name;
+        in
+        if value != "" then
+          value
+        else
+          throw ''
+            環境変数 ${name} が空です。--impure を付けて実行してください。
+            例: nix run .#home-manager -- switch --flake .#default --impure
+          '';
+
+      mkHome = system: home-manager.lib.homeManagerConfiguration {
         pkgs = nixpkgs.legacyPackages.${system};
         modules = [
           ./home.nix
-          { home.username = username; }
+          {
+            home.username = envOrThrow "USER";
+            home.homeDirectory = envOrThrow "HOME";
+          }
         ];
       };
     in
     {
-      # macOS (Apple Silicon)
-      homeConfigurations."aarch64-darwin" = mkHomeConfiguration "aarch64-darwin" defaultUser;
+      # 通常はこれを使う。system も実行環境から判定するので
+      # プラットフォームごとにターゲットを指定し分ける必要がない。
+      homeConfigurations = lib.genAttrs systems mkHome // {
+        default = mkHome builtins.currentSystem;
+      };
 
-      # Linux x86_64 (devcontainer用)
-      homeConfigurations."x86_64-linux" = mkHomeConfiguration "x86_64-linux" containerUser;
-
-      # Linux ARM64 (devcontainer用 - Apple Silicon Mac)
-      homeConfigurations."aarch64-linux" = mkHomeConfiguration "aarch64-linux" containerUser;
-
-      # デフォルト (macOS ARM64)
-      homeConfigurations.default = mkHomeConfiguration "aarch64-darwin" defaultUser;
+      # flake.lock で固定した home-manager。`nix run home-manager/master` のように
+      # 毎回ネットから別バージョンを取得して壊れるのを避けるためにこちらを使う。
+      packages = lib.genAttrs systems (system: {
+        home-manager = home-manager.packages.${system}.default;
+        default = home-manager.packages.${system}.default;
+      });
     };
 }

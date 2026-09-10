@@ -1,37 +1,24 @@
 { config, pkgs, lib, ... }:
 
 {
-  # Home Managerのバージョン設定
   home.stateVersion = "24.05";
 
-  home.homeDirectory = lib.mkDefault (
-    if pkgs.stdenv.isDarwin
-    then "/Users/${config.home.username}"
-    else "/home/${config.home.username}"
-  );
-
-  # Unfreeパッケージを許可 (1Password CLI等)
-  nixpkgs.config.allowUnfree = true;
-
-  # モジュールのインポート
   imports = [
     ./modules/packages.nix
     ./modules/git.nix
     ./modules/shell.nix
   ];
 
-  # Home Managerによる設定ファイル管理
-  home.file = {
-    ".zshrc".source = ./.zshrc;
-    ".gitconfig".source = ./.gitconfig;
-    ".config/starship.toml".source = ./.config/starship.toml;
-    ".zsh_plugins.txt".source = ./zsh_plugins.txt;
-  };
+  # NixOS 以外の Linux (devcontainer 等) で nix profile の PATH / TERMINFO /
+  # zsh の fpath を正しく通すための公式スイッチ。
+  targets.genericLinux.enable = pkgs.stdenv.isLinux;
 
-  home.sessionVariables = {
+  xdg.configFile."starship.toml".source = ./.config/starship.toml;
+
+  # 1Password の SSH agent は macOS のパスにしか存在しない。
+  home.sessionVariables = lib.mkIf pkgs.stdenv.isDarwin {
     SSH_AUTH_SOCK = "${config.home.homeDirectory}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock";
   };
 
-  # Home Manager自体にプログラム管理を任せる
   programs.home-manager.enable = true;
 }

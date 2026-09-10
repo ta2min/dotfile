@@ -1,186 +1,154 @@
 # dotfile
 
-個人的なシェル環境の設定ファイルをNixで管理するリポジトリです。
+個人的なシェル環境の設定を Nix + Home Manager で管理するリポジトリです。
 
-**マルチプラットフォーム対応**: macOS (ARM64/Intel) と Linux (devcontainer) で動作します。
-
-## 含まれる設定
-
-- **パッケージ管理**: Nix + Home Manager
-- **シェル設定**: Zsh + Starship + Antidote
-- **Git設定**: エイリアスとコア設定
-- **プロンプト**: Starship (Gruvbox Dark)
-- **言語ランタイム**: mise経由で管理
-- **DevContainer対応**: Ubuntuベースのコンテナで即座に環境構築
+macOS (ARM64/Intel) と Linux (devcontainer) で同じ定義から環境を構築します。
 
 ## セットアップ
 
-### 前提条件
+### 前提: Nix のインストール
 
-#### 1. Nixのインストール
+macOS:
 
 ```bash
-# Nix (Determinate Systems版・推奨)
 curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
-
-# または公式版
-sh <(curl -L https://nixos.org/nix/install)
 ```
 
-#### 2. Flakesの有効化 (公式版Nixの場合)
+devcontainer: `ghcr.io/devcontainers/features/nix:1` feature を使うか、
+`nixos/nix` ベースイメージを使います。
+
+### 適用
 
 ```bash
-mkdir -p ~/.config/nix
-echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+./install.sh
 ```
 
-### インストール手順
+macOS でもコンテナでも同じコマンドです。プラットフォームとユーザー名は
+実行時に自動判定されるので、ターゲットの指定は不要です。
 
-#### 方法1: macOSで使用 (推奨)
+手動で実行する場合:
 
 ```bash
-# リポジトリをクローン
-git clone https://github.com/ta2min/dotfile.git ~/ghq/github.com/ta2min/dotfile
-cd ~/ghq/github.com/ta2min/dotfile
-
-# Apple Silicon Mac
-# --impure: flake.nix 内の $USER 参照 (builtins.getEnv) を有効にするため必須
-nix run home-manager/master -- switch --flake .#aarch64-darwin --impure
-
-# Linux/DevContainer
-nix run home-manager/master -- switch --flake .#x86_64-linux --impure
-
-# デフォルト (Apple Silicon)
-nix run home-manager/master -- switch --flake .#default --impure
+nix run .#home-manager -- switch --flake .#default -b backup --impure
 ```
 
-#### 方法2: DevContainerで使用
+`--impure` は必須です。ユーザー名とホームディレクトリを `$USER` / `$HOME` から
+読むため（コンテナごとに `vscode` / `node` / `ubuntu` などに変わる）で、
+未設定の場合は誤ったホームに書き込まないよう即座に失敗します。
 
-VS Codeでリポジトリを開き、コマンドパレットから:
-```
-Dev Containers: Reopen in Container
-```
+### 他プロジェクトの devcontainer で使う
 
-自動的にNix環境がセットアップされます。詳細は [.devcontainer/README.md](.devcontainer/README.md) を参照。
+VS Code の設定に以下を入れると、任意の devcontainer にこの環境が入ります。
 
-#### 方法3: 既存環境との併用
-
-既存の設定を残したまま段階的に移行する場合:
-
-```bash
-# 既存の.zshrcをバックアップ
-cp ~/.zshrc ~/.zshrc.backup
-
-# Home Managerで適用 (既存ファイルは上書きされます)
-# プラットフォームに応じたターゲットを指定
-nix run home-manager/master -- switch --flake .#aarch64-darwin
-
-# 問題があれば元に戻せます
-# cp ~/.zshrc.backup ~/.zshrc
-```
-
-### 設定の更新
-
-```bash
-cd ~/ghq/github.com/ta2min/dotfile
-
-# 設定ファイルを編集後、適用 (プラットフォームに応じて選択)
-home-manager switch --flake .#aarch64-darwin  # macOS ARM64
-home-manager switch --flake .#x86_64-linux    # Linux/DevContainer
-home-manager switch --flake .#default         # デフォルト (macOS ARM64)
+```json
+{
+  "dotfiles.repository": "ta2min/dotfile",
+  "dotfiles.installCommand": "install.sh"
+}
 ```
 
 ## ファイル構成
 
 ```
 dotfile/
-├── flake.nix                    # Nix Flake定義 (マルチプラットフォーム対応)
-├── home.nix                     # Home Manager設定
+├── flake.nix              # 入力の固定とエントリポイント
+├── home.nix               # Home Manager のトップレベル設定
 ├── modules/
-│   ├── packages.nix            # パッケージ一覧 (プラットフォーム別)
-│   ├── git.nix                 # Git設定
-│   └── shell.nix               # Zsh設定 (プラットフォーム別)
-├── .devcontainer/
-│   ├── devcontainer.json       # DevContainer設定
-│   └── README.md               # DevContainer利用ガイド
+│   ├── packages.nix       # パッケージ一覧 (共通 / macOS専用)
+│   ├── git.nix            # Git 設定
+│   └── shell.nix          # Zsh 設定とツール統合
 ├── .config/
-│   └── starship.toml           # Starshipプロンプト設定
-├── zsh_plugins.txt             # Antidoteプラグイン定義
-├── .zshrc                      # (レガシー・参照用)
-├── .gitconfig                  # (レガシー・参照用)
-└── install.sh                  # (レガシー・非推奨)
+│   └── starship.toml      # Starship プロンプト設定
+└── install.sh             # セットアップスクリプト
 ```
+
+`.zshrc` や `.gitconfig` はリポジトリに置きません。
+[modules/shell.nix](modules/shell.nix) と [modules/git.nix](modules/git.nix) から
+Home Manager が生成します。
 
 ## 管理されるツール
 
-### Nix経由でインストール (全プラットフォーム共通)
-- `starship` - プロンプト
-- `fzf` - fuzzy finder
-- `zoxide` - cd改善
-- `tree` - ディレクトリツリー
-- `ghq` - リポジトリ管理
-- `git-open` - GitHub統合
-- `gomi` - 安全なrm代替
-- `gnused` - GNU sed
-- `mise` - 言語ランタイム管理
-- `mysql80` - MySQLクライアント
-- `antidote` - Zshプラグイン管理
+### 全プラットフォーム共通
 
-### macOS専用
-- `1password` - 1Password CLI
-- `pbcopy`/`pbpaste` エイリアス
-- Homebrew経由のMySQL client PATH
+Nix (`home.packages` および各 HM モジュール) 経由:
 
-### mise経由で管理 (プロジェクトごと)
-- Go, Node.js, Bun, golangci-lint, staticcheck など
+- `starship` — プロンプト
+- `fzf` — fuzzy finder
+- `zoxide` — cd 改善 (`cd` として使う)
+- `mise` — 言語ランタイム管理
+- `antidote` — zsh プラグイン管理
+- `tree`, `ghq`, `gh`, `git-open`, `gomi`, `gnused`
+
+zsh プラグイン (antidote 経由、定義は [modules/shell.nix](modules/shell.nix)):
+
+- `zsh-users/zsh-autosuggestions`
+- `zsh-users/zsh-completions`
+- `Aloxaf/fzf-tab`
+- `zdharma-continuum/fast-syntax-highlighting`
+- `paulirish/git-open`
+
+### macOS 専用
+
+- `docker`, `docker-buildx`, `docker-compose`
+- `awscli2`
+- `mysql84` (MySQL クライアント)
+- 1Password SSH agent の `SSH_AUTH_SOCK`
+- `sed` → `gsed`、`pbcopy` エイリアス
+
+コンテナでは docker / aws / mysql を入れません。docker は devcontainer feature か
+ホスト側に任せる方が軽量で確実です。必要になったら
+[modules/packages.nix](modules/packages.nix) の `commonPackages` に移してください。
+
+1Password CLI (`op`) は unfree のため Nix 管理外です。macOS では
+`brew install 1password-cli` などで別途入れてください。
+`~/.config/op/plugins.sh` があれば zsh から自動で読み込みます。
+
+### mise 経由 (プロジェクトごと)
+
+Go, Node.js, Bun, golangci-lint, staticcheck など。
+
+## 設定を変えたとき
+
+```bash
+./install.sh    # または nix run .#home-manager -- switch --flake .#default --impure
+exec zsh
+```
+
+## 依存の更新
+
+```bash
+nix flake update
+./install.sh
+```
 
 ## トラブルシューティング
 
-### パスが通らない場合
+### 古いシェルで確認すると Homebrew 版が見える
+
+`command -v starship` が `/opt/homebrew/bin/...` を返す場合、そのシェルが
+適用前の PATH を継承しています。新しいシェルで確認してください。
 
 ```bash
-# Home Managerのパスを確認
-echo $PATH | grep nix
-
-# シェルを再起動
 exec zsh
+command -v starship    # ~/.nix-profile/bin/starship になる
+```
+
+### Could not find suitable profile directory
+
+Home Manager の profile ディレクトリが無いときに出ます。
+`install.sh` は事前に作成しますが、手動実行した場合は次を実行してください。
+
+```bash
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles"
 ```
 
 ### 既存ファイルとの競合
 
-Home Managerは`~/.zshrc`や`~/.gitconfig`を管理しようとします。
-既存ファイルがある場合は以下の手順:
-
-1. バックアップ: `mv ~/.zshrc ~/.zshrc.backup`
-2. 適用: `home-manager switch --flake .#aarch64-darwin`
-3. 必要に応じてカスタム設定を[modules/shell.nix](modules/shell.nix)に追記
-
-### Antidoteが見つからない場合
-
-```bash
-# Antidoteのパスを確認
-which antidote
-
-# Homebrewとの競合を避ける場合
-brew uninstall antidote
-```
-
-## レガシー環境への切り戻し
-
-```bash
-# Nixをアンインストール
-/nix/nix-installer uninstall
-
-# バックアップから復元
-cp ~/.zshrc.backup ~/.zshrc
-cp ~/.gitconfig.backup ~/.gitconfig
-
-# 従来のinstall.shを使用
-./install.sh
-```
+`-b backup` を付けているので、既存の `~/.zshrc` などは `.backup` 拡張子を
+付けて退避されます。
 
 ## 参考リンク
 
-- [Nix公式](https://nixos.org/)
-- [Home Manager](https://github.com/nix-community/home-manager)
-- [Nix Flakes入門](https://nixos.wiki/wiki/Flakes)
+- [Nix](https://nixos.org/)
+- [Home Manager](https://nix-community.github.io/home-manager/)
+- [Home Manager options](https://nix-community.github.io/home-manager/options.xhtml)

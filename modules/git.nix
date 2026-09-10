@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, ... }:
 
 {
   programs.git = {
@@ -32,7 +32,7 @@
 
       core = {
         editor = "code --wait";
-        hooksPath = "/Users/ta2min/.config/git/hooks";
+        hooksPath = "${config.xdg.configHome}/git/hooks";
       };
 
       push = {

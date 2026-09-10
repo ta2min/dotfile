@@ -1,107 +1,58 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# dotfiles セットアップ。macOS と Linux (devcontainer) の両方で動く。
+# Nix 本体のインストールは対象外 (macOS は手動、devcontainer は feature)。
 
-set -e
+set -euo pipefail
 
-# 色の定義
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# ユーザー名の取得（引数 > SUDO_USER > 環境変数 > 現在のユーザー）
-# DevContainerでsudo経由で実行された場合、元のユーザーを取得
-TARGET_USER="${1:-${SUDO_USER:-${USER:-$(whoami)}}}"
-
-# スクリプトのディレクトリを取得
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKUP_DIR="$HOME/.dotfile_backup"
 
-echo -e "${GREEN}Dotfiles のセットアップを開始します${NC}"
-echo "Dotfiles ディレクトリ: $DOTFILES_DIR"
-echo "対象ユーザー: $TARGET_USER"
+log() { printf '\033[0;32m==>\033[0m %s\n' "$1"; }
+warn() { printf '\033[1;33m==>\033[0m %s\n' "$1"; }
+die() { printf '\033[0;31mエラー:\033[0m %s\n' "$1" >&2; exit 1; }
 
-# Nix環境の確認とセットアップ
-echo ""
-echo "=== Nix 環境の確認 ==="
-
-# Nixの環境変数をロード
-if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
-  echo -e "${YELLOW}Nix環境変数をロード中 (multi-user)...${NC}"
-  . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-elif [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
-  echo -e "${YELLOW}Nix環境変数をロード中 (single-user)...${NC}"
-  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+# --- Nix を PATH に載せる -----------------------------------------------------
+# ログインシェルを経由しない実行 (postCreateCommand 等) では nix が PATH に
+# 無いことがあるため、既知の場所から読み込む。
+if ! command -v nix >/dev/null 2>&1; then
+  for profile in \
+    /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh \
+    "$HOME/.nix-profile/etc/profile.d/nix.sh"
+  do
+    # shellcheck disable=SC1090
+    [ -f "$profile" ] && . "$profile" && break
+  done
 fi
+export PATH="/nix/var/nix/profiles/default/bin:$PATH"
 
-# PATHの設定
-if [ -d /nix/store ]; then
-  export PATH="/nix/var/nix/profiles/default/bin:$HOME/.nix-profile/bin:$PATH"
-fi
+command -v nix >/dev/null 2>&1 || die "nix が見つかりません。先に Nix をインストールしてください。"
+log "nix: $(nix --version)"
 
-# Nixが利用可能か確認
-if ! command -v nix &> /dev/null; then
-  echo -e "${RED}エラー: Nix がインストールされていません${NC}"
-  echo -e "${YELLOW}DevContainerのfeatureでNixをインストールしてください${NC}"
-  exit 1
-fi
-
-echo -e "${GREEN}Nix が利用可能です ($(nix --version))${NC}"
-
-# Home Managerのセットアップ
-echo ""
-echo "=== Home Manager のセットアップ ==="
-if [ -f "$DOTFILES_DIR/flake.nix" ]; then
-  echo -e "${YELLOW}Home Manager で環境を構築します...${NC}"
-
-  # コンテナ環境での事前準備
-  if [ -f "/.dockerenv" ] || [ -n "$REMOTE_CONTAINERS" ] || [ -n "$CODESPACES" ]; then
-    TARGET_HOME=$(eval echo ~$TARGET_USER)
-    echo -e "${YELLOW}Nixプロファイルディレクトリを準備中...${NC}"
-
-    # プロファイルディレクトリを作成
-    sudo mkdir -p "/nix/var/nix/profiles/per-user/$TARGET_USER"
-    sudo chown -R "$TARGET_USER" "/nix/var/nix/profiles/per-user/$TARGET_USER"
+# --- flakes を有効にする -----------------------------------------------------
+# Determinate Systems 版は既に有効だが、公式インストーラや古い devcontainer
+# feature では未設定なことがある。--extra-experimental-features で毎回渡すより
+# 設定に書いておく方が、後続の home-manager 実行でも効く。
+NIX_CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/nix"
+if ! nix flake --help >/dev/null 2>&1; then
+  log "flakes を有効化します ($NIX_CONF_DIR/nix.conf)"
+  mkdir -p "$NIX_CONF_DIR"
+  if ! grep -qs 'experimental-features.*flakes' "$NIX_CONF_DIR/nix.conf"; then
+    echo 'extra-experimental-features = nix-command flakes' >> "$NIX_CONF_DIR/nix.conf"
   fi
-
-  # プラットフォームの検出
-  ARCH="$(uname -m)"
-  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    if [[ "$ARCH" == "aarch64" ]] || [[ "$ARCH" == "arm64" ]]; then
-      PLATFORM="aarch64-linux"
-    else
-      PLATFORM="x86_64-linux"
-    fi
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
-    if [[ "$ARCH" == "arm64" ]]; then
-      PLATFORM="aarch64-darwin"
-    else
-      PLATFORM="x86_64-darwin"
-    fi
-  else
-    # デフォルトはアーキテクチャを検出
-    if [[ "$ARCH" == "aarch64" ]] || [[ "$ARCH" == "arm64" ]]; then
-      PLATFORM="aarch64-linux"
-    else
-      PLATFORM="x86_64-linux"
-    fi
-  fi
-
-  # --impure: flake.nix 内の builtins.getEnv "USER" を有効にするため
-  nix run home-manager/master -- switch --flake "$DOTFILES_DIR#$PLATFORM" -b backup --impure
-
-  echo -e "${GREEN}Home Manager のセットアップが完了しました${NC}"
-else
-  echo -e "${YELLOW}flake.nix が見つかりませんでした。スキップします${NC}"
 fi
 
-echo ""
-echo -e "${GREEN}セットアップが完了しました！${NC}"
-echo ""
-echo "次のステップ:"
-echo "1. シェルを再起動するか、以下を実行してください:"
-echo "   source ~/.zshrc"
-echo ""
-echo "2. Antidoteがプラグインをインストールします（初回起動時）"
-echo ""
-echo "3. 必要なツールがインストールされているか確認してください:"
-echo "   - starship, fzf, zoxide, mise, antidote, tree, ghq, gomi"
+# --- home-manager の profile 置き場を用意 ------------------------------------
+# home-manager の activation script は profile ディレクトリが存在しないと
+# 「Could not find suitable profile directory」で失敗する。
+# XDG 側 ($HOME 配下) なら sudo 無しで作れるので、必ずこちらを先に作る。
+mkdir -p "${XDG_STATE_HOME:-$HOME/.local/state}/nix/profiles"
+
+# --- 適用 --------------------------------------------------------------------
+# --impure: flake.nix が $USER / $HOME を読むため必須。
+# nix run .#home-manager: flake.lock で固定した home-manager を使う。
+# `nix run home-manager/master` だと毎回別バージョンを取得して壊れる。
+log "home-manager で環境を構築します (user=$USER home=$HOME)"
+nix run "$DOTFILES_DIR#home-manager" -- \
+  switch --flake "$DOTFILES_DIR#default" -b backup --impure
+
+log "完了しました。シェルを再起動してください: exec zsh"
