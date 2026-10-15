@@ -9,6 +9,7 @@ let
     git-open    # GitHubをブラウザで開く
     gomi        # rmの安全な代替
     gnused      # GNU sed
+    herdr       # コーディングエージェントのTUIマネージャ
   ];
 
   # macOS 専用。docker / mysql / aws はコンテナ側では
@@ -17,6 +18,7 @@ let
     docker
     docker-buildx
     docker-compose
+    devcontainer # devcontainer CLI
     awscli2
     mysql84     # MySQLクライアント
   ];
@@ -25,5 +27,5 @@ in
   # starship / fzf / zoxide / mise / antidote は modules/shell.nix の
   # HM モジュールが home.packages へ追加するのでここには書かない。
   home.packages = commonPackages
-    ++ lib.optionals pkgs.stdenv.isDarwin darwinPackages;
+    ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin darwinPackages;
 }

@@ -78,6 +78,7 @@ Nix (`home.packages` および各 HM モジュール) 経由:
 - `mise` — 言語ランタイム管理
 - `antidote` — zsh プラグイン管理
 - `tree`, `ghq`, `gh`, `git-open`, `gomi`, `gnused`
+- `herdr` — エージェント multiplexer
 
 zsh プラグイン (antidote 経由、定義は [modules/shell.nix](modules/shell.nix)):
 
@@ -90,6 +91,7 @@ zsh プラグイン (antidote 経由、定義は [modules/shell.nix](modules/she
 ### macOS 専用
 
 - `docker`, `docker-buildx`, `docker-compose`
+- `devcontainer` (devcontainer CLI)
 - `awscli2`
 - `mysql84` (MySQL クライアント)
 - 1Password SSH agent の `SSH_AUTH_SOCK`

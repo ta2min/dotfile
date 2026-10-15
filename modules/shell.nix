@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  isDarwin = pkgs.stdenv.isDarwin;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 in
 {
   programs.zsh = {
@@ -107,6 +107,12 @@ in
         [[ -f ~/.config/op/plugins.sh ]] && source ~/.config/op/plugins.sh
       ''))
     ];
+
+    # Homebrew は Nix 管理外。HM が .zprofile を生成するので、
+    # 手書きの .zprofile にあった shellenv をこちらへ移す。
+    profileExtra = lib.optionalString isDarwin ''
+      [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+    '';
 
     shellAliases = {
       g = "cd $(ghq root)/$(ghq list | fzf)";
