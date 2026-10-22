@@ -10,6 +10,7 @@ let
     gomi        # rmの安全な代替
     gnused      # GNU sed
     herdr       # コーディングエージェントのTUIマネージャ
+    curl
   ];
 
   # macOS 専用。docker / mysql / aws はコンテナ側では
